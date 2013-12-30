@@ -24,7 +24,7 @@ def get_page(url):
 
 # threads
 
-class FetchUser(threading.Thread):
+class FetchUrlWorker(threading.Thread):
     def __init__(self, input_queue, db_queue):
           threading.Thread.__init__(self)
           self.input_queue = input_queue
@@ -69,20 +69,20 @@ class DbWorker(threading.Thread):
 # main
 
 if __name__ == '__main__':
-    user_queue = Queue.Queue()
+    download_queue = Queue.Queue()
     db_queue = Queue.Queue()
 
     #spawn a pool of threads, and pass them queue instance 
-    fetch_user_workers = []
+    fetch_url_workers = []
     for i in range(30):
-        t = FetchUser(user_queue, db_queue)
+        t = FetchUrlWorker(download_queue, db_queue)
         t.setDaemon(True)
         t.start()
-        fetch_user_workers.append(t)
+        fetch_url_workers.append(t)
               
     #populate queue with data   
-    for host in hacker_school.groups['winter2013']:
-        user_queue.put(host)
+    for user in hacker_school.groups['winter2013']:
+        download_queue.put(user)
 
     # start a DbWorker
     db_worker = DbWorker(db_queue)
@@ -90,5 +90,5 @@ if __name__ == '__main__':
     db_worker.start()
 
     #wait on the queue until everything has been processed     
-    user_queue.join()
+    download_queue.join()
     db_queue.join()
