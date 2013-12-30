@@ -31,7 +31,7 @@ class FetchUrlWorker(threading.Thread):
           
     def run(self):
         while True:
-            user = self.input_queue.get() #grabs host from input_queue
+            _, user = self.input_queue.get() #grabs host from input_queue
             #print('Sending request for {0}'.format(user))
             data = get_page(user_url.format(user))
             try:
@@ -58,7 +58,7 @@ class DbWorker(threading.Thread):
                 table, entry = self.queue.get()
                 print('Got: {0}, {1}'.format(table, entry))
                 if table == 'users':
-                    c.execute('INSERT INTO users values (?, ?)', entry)
+                    c.execute('INSERT OR REPLACE INTO users values (?, ?)', entry)
                     conn.commit()
             except:
                 print('Error with db insert: {0}'.format(entry))
@@ -82,7 +82,7 @@ if __name__ == '__main__':
               
     #populate queue with data   
     for user in hacker_school.groups['winter2013']:
-        download_queue.put(user)
+        download_queue.put(('user', user))
 
     # start a DbWorker
     db_worker = DbWorker(db_queue)
