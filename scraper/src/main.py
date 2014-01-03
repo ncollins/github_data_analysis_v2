@@ -32,6 +32,8 @@ def get_pages(url, max_pages=100):
         data.extend(new_data)
         if len(new_data) < 30:
             break
+    # remove cases where we didn't get an object
+    #return [d for d in data if not isinstance(d, str)]
     return data
 
 
@@ -45,8 +47,10 @@ class FetchUrlWorker(threading.Thread):
           
     def run(self):
         while True:
-            page_type, url = self.download_queue.get() #grabs host from download_queue
+            job = self.download_queue.get() #grabs host from download_queue
+            page_type = job[0]
             if page_type == 'user':
+                url = job[1]
                 data = get_page(url)
                 try:
                     login = data.get('login', None)
@@ -60,6 +64,7 @@ class FetchUrlWorker(threading.Thread):
                 except:
                     print('problem with {0}'.format(login))
             elif page_type == 'repos':
+                url = job[1]
                 raw_data = get_pages(url)
                 data = []
                 for r in raw_data:
@@ -69,8 +74,21 @@ class FetchUrlWorker(threading.Thread):
                                  r['language'],
                                  1 if r['fork'] == True else 0,
                                  r['contributors_url']))
+                    if r['fork'] == False:
+                        self.download_queue.put(('contributors', r['contributors_url'], r['name']))
                 if data:
                     self.db_queue.put(('repos', data))
+            elif page_type == 'contributors':
+                url = job[1]
+                repo = job[2]
+                raw_data = get_pages(url)
+                data = []
+                for r in raw_data:
+                    data.append((repo,
+                                 r['login'],
+                                 int(r['contributions'])))
+                if data:
+                    self.db_queue.put(('contributors', data))
                 
             self.download_queue.task_done() #signals to download_queue job is done
 
@@ -91,9 +109,13 @@ class DbWorker(threading.Thread):
                     with conn:
                         conn.execute('INSERT OR REPLACE INTO users VALUES (?, ?)', data)
                 elif table == 'repos':
-                    print('DB got: {0}, {1}'.format(table, data[0]))
+                    print('DB got: {0}, [{1}, ...]'.format(table, data[0]))
                     with conn:
                         conn.executemany('INSERT OR REPLACE INTO repos VALUES (?, ?, ?, ?, ?, ?)', data)
+                elif table == 'contributors':
+                    print('DB got: {0}, [{1}, ...]'.format(table, data[0]))
+                    with conn:
+                        conn.executemany('INSERT OR REPLACE INTO contributors VALUES (?, ?, ?)', data)
             except:
                 print('Error with db insert: table={0}, data={1}'.format(table, data))
             finally:
