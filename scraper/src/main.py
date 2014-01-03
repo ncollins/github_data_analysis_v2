@@ -46,19 +46,21 @@ class FetchUrlWorker(threading.Thread):
     def run(self):
         while True:
             job = self.download_queue.get() #grabs host from download_queue
-            page_type = job[0]
-            if page_type == 'user':
-                url = job[1]
-                self._fetch_user(url)
-            elif page_type == 'repos':
-                url = job[1]
-                self._fetch_repos(url)
-            elif page_type == 'contributors':
-                url, repo_name = job[1], job[2]
-                self._fetch_contributors(url, repo_name)
-            else:
-                print('Unrecognized page type "{0}".'.format(page_type))
-            self.download_queue.task_done() #signals to download_queue job is done
+            try:
+                page_type = job[0]
+                if page_type == 'user':
+                    url = job[1]
+                    self._fetch_user(url)
+                elif page_type == 'repos':
+                    url = job[1]
+                    self._fetch_repos(url)
+                elif page_type == 'contributors':
+                    url, repo_name = job[1], job[2]
+                    self._fetch_contributors(url, repo_name)
+                else:
+                    print('Unrecognized page type "{0}".'.format(page_type))
+            finally:
+                self.download_queue.task_done() #signals to download_queue job is done
 
     def _fetch_user(self, url):
         data = get_page(url)
