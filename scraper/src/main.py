@@ -22,46 +22,80 @@ def get_page(url):
         print('Error getting: {}'.format(url))
         return None
 
+
+def get_pages(url, max_pages=100):
+    url = url + '?page={}'
+    data = []
+    for i in range(max_pages):
+        print('GET: {}'.format(url.format(i)))
+        new_data = get_page(url.format(i))
+        data.extend(new_data)
+        if len(new_data) < 30:
+            break
+    return data
+
+
 # threads
 
 class FetchUrlWorker(threading.Thread):
-    def __init__(self, input_queue, db_queue):
+    def __init__(self, download_queue, db_queue):
           threading.Thread.__init__(self)
-          self.input_queue = input_queue
+          self.download_queue = download_queue
+          self.db_queue = db_queue
           
     def run(self):
         while True:
-            _, user = self.input_queue.get() #grabs host from input_queue
-            #print('Sending request for {0}'.format(user))
-            data = get_page(user_url.format(user))
-            try:
-                db_queue.put(('users', (user, data.get('repos_url', None))))
-                #print('Data recieved for {0}: {1}'.format(user, data.get('repos_url', None)))
-            except:
-                pass
-                #print('Error getting {0}'.format(user))
-            finally:
-                self.input_queue.task_done() #signals to input_queue job is done
+            page_type, url = self.download_queue.get() #grabs host from download_queue
+            if page_type == 'user':
+                data = get_page(url)
+                try:
+                    login = data.get('login', None)
+                    repos_url = data.get('repos_url', None)
+                    if login:
+                        self.db_queue.put(('users', (login, repos_url)))
+                    else:
+                        print('No "login" for {0}'.format(url))
+                    if repos_url:
+                        self.download_queue.put(('repos', repos_url))
+                except:
+                    print('problem with {0}'.format(login))
+            elif page_type == 'repos':
+                raw_data = get_pages(url)
+                data = []
+                for r in raw_data:
+                    data.append((r['name'], # name
+                                 r['owner']['login'], # owner
+                                 r['url'],
+                                 r['language'],
+                                 1 if r['fork'] == True else 0,
+                                 r['contributors_url']))
+                if data:
+                    self.db_queue.put(('repos', data))
+                
+            self.download_queue.task_done() #signals to download_queue job is done
 
 
 class DbWorker(threading.Thread):
     def __init__(self, queue):
-        print('init db')
         threading.Thread.__init__(self)
         self.queue = queue
 
     def run(self):
         conn = sqlite3.connect('../../database.db')
-        c = conn.cursor()
+        #c = conn.cursor()
         while True:
+            table, data = self.queue.get()
             try:
-                table, entry = self.queue.get()
-                print('Got: {0}, {1}'.format(table, entry))
                 if table == 'users':
-                    c.execute('INSERT OR REPLACE INTO users values (?, ?)', entry)
-                    conn.commit()
+                    print('DB got: {0}, {1}'.format(table, data))
+                    with conn:
+                        conn.execute('INSERT OR REPLACE INTO users VALUES (?, ?)', data)
+                elif table == 'repos':
+                    print('DB got: {0}, {1}'.format(table, data[0]))
+                    with conn:
+                        conn.executemany('INSERT OR REPLACE INTO repos VALUES (?, ?, ?, ?, ?, ?)', data)
             except:
-                print('Error with db insert: {0}'.format(entry))
+                print('Error with db insert: table={0}, data={1}'.format(table, data))
             finally:
                 self.queue.task_done()
         conn.close()
@@ -82,7 +116,7 @@ if __name__ == '__main__':
               
     #populate queue with data   
     for user in hacker_school.groups['winter2013']:
-        download_queue.put(('user', user))
+        download_queue.put(('user', user_url.format(user)))
 
     # start a DbWorker
     db_worker = DbWorker(db_queue)
