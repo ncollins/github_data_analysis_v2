@@ -52,11 +52,11 @@ class FetchUrlWorker(threading.Thread):
                     url = job[1]
                     self._fetch_user(url)
                 elif page_type == 'repos':
-                    url = job[1]
-                    self._fetch_repos(url)
+                    url, user_id = job[1:]
+                    self._fetch_repos(url, user_id)
                 elif page_type == 'contributors':
-                    url, repo_name = job[1], job[2]
-                    self._fetch_contributors(url, repo_name)
+                    url, repo_id, user_id = job[1:]
+                    self._fetch_contributors(url, repo_id, user_id)
                 else:
                     print('Unrecognized page type "{0}".'.format(page_type))
             finally:
@@ -65,38 +65,40 @@ class FetchUrlWorker(threading.Thread):
     def _fetch_user(self, url):
         data = get_page(url)
         try:
+            user_id = data.get('id', None)
             login = data.get('login', None)
             repos_url = data.get('repos_url', None)
-            if login:
-                self.db_queue.put(('users', (login, repos_url)))
+            if user_id:
+                self.db_queue.put(('users', (user_id, login, repos_url)))
                 if repos_url:
-                    self.download_queue.put(('repos', repos_url))
+                    self.download_queue.put(('repos', repos_url, user_id))
             else:
-                print('No "login" for {0}'.format(url))
+                print('No "login" for {0}, data={1}'.format(url, data))
         except:
             print('problem with {0}'.format(login))
 
-    def _fetch_repos(self, url):
+    def _fetch_repos(self, url, user_id):
         repos = get_pages(url)
         data = []
         for r in repos:
-            data.append((r['name'],
-                         r['owner']['login'],
+            data.append((r['id'],
+                         user_id,
+                         r['name'],
                          r['url'],
                          r['language'],
                          1 if r['fork'] == True else 0,
                          r['contributors_url']))
             if r['fork'] == False:
-                self.download_queue.put(('contributors', r['contributors_url'], r['name']))
+                self.download_queue.put(('contributors', r['contributors_url'], r['id'], user_id))
         if data:
             self.db_queue.put(('repos', data)) 
 
-    def _fetch_contributors(self, url, repo_name):
+    def _fetch_contributors(self, url, repo_id, user_id):
         contributors = get_pages(url)
         data = []
         for c in contributors:
-            data.append((repo_name,
-                         c['login'],
+            data.append((repo_id,
+                         user_id,
                          int(c['contributions'])))
         if data:
             self.db_queue.put(('contributors', data))
@@ -114,11 +116,11 @@ class DbWorker(threading.Thread):
                 if table == 'users':
                     print('DB got: {0}, {1}'.format(table, data))
                     with conn:
-                        conn.execute('INSERT OR REPLACE INTO users VALUES (?, ?)', data)
+                        conn.execute('INSERT OR REPLACE INTO users VALUES (?, ?, ?)', data)
                 elif table == 'repos':
                     print('DB got: {0}, [{1}, ...]'.format(table, data[0]))
                     with conn:
-                        conn.executemany('INSERT OR REPLACE INTO repos VALUES (?, ?, ?, ?, ?, ?)', data)
+                        conn.executemany('INSERT OR REPLACE INTO repos VALUES (?, ?, ?, ?, ?, ?, ?)', data)
                 elif table == 'contributors':
                     print('DB got: {0}, [{1}, ...]'.format(table, data[0]))
                     with conn:
