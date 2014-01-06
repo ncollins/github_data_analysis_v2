@@ -1,0 +1,20 @@
+{% extends "templates/base.html" %}
+
+{% block body %}
+<div id="topimage" align="center">
+  <img src="static/image/hs_blue_logo.png" />
+</div>
+
+<button id="pcbutton">Principle Components</button>
+<button id="contributionsbutton">Contributions</button>
+
+<div id="wrapper">
+  <div id="hackers"></div>
+  <div id="graph"><svg id='mainSVG'></svg></div>
+  <div id="collaborators"></div>
+</div>
+
+<script>
+  d3.json("static/data/hacker_links.json", setup);
+</script>
+{% endblock %}

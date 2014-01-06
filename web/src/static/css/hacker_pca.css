@@ -1,0 +1,95 @@
+body {
+    /*background-color:#f3f8e6;*/
+    background-color: #f0ffc7;
+    /*font-family:Verdana, Geneva, sans-serif;*/
+    font-family:'Ubuntu', sans-serif;*/
+}
+
+img.collaborator-img {
+    display:block;
+}
+
+.axis {
+    font-family: arial;
+    font-size:0.6em;
+}
+
+path {
+    fill:none;
+    stroke:black;
+    stroke-width:2px;
+}
+
+.tick {
+    /*fill:none;
+    stroke:black;*/
+}
+
+circle.notselected {
+    stroke:black;
+    stroke-width:0.5px;
+    fill:#cc0092;
+}
+
+circle.selected {
+    stroke:black;
+    stroke-width:0.5px;
+    /*fill:#cc0092;*/
+}
+/*
+path.line{
+    stroke:navy;
+    fill:navy;
+}
+*/
+
+#topimage {
+    width:1000px;
+}
+
+#wrapper {
+    width:1000px;
+}
+
+#hackers {
+    width:150px;
+    height:600px;
+    float:left;
+}
+
+#graph {
+    width:600px;
+    height:600px;
+    float:left;
+}
+
+#collaborators {
+    width:200px;
+    height:600px;
+    float:left;
+}
+
+.collaborator {
+    margin-top:5px;
+    margin-bottom:5px;
+    width:200px;
+    height:30px;
+    float:none;
+}
+
+.collaborator-image {
+    float:left;
+}
+
+.collaborator-name {
+    width:165px;
+    margin-left:5px;
+    height:30px;
+    line-height:30px;
+    float:left;
+}
+
+textarea {
+    width:400px;
+    height: 300px;
+}

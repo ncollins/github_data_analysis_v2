@@ -1,0 +1,18 @@
+{% extends "templates/base.html" %}
+
+{% block body %}
+<div id="topimage" align="center">
+  <img src="static/image/hs_blue_logo.png" />
+</div>
+
+<p>
+  Enter a list of hackers to add to the sytem.
+  Individuals will be split by whitespace and commas.
+</p>
+
+<form action='/upload' method='post'>
+  <textarea type='text' name='hackers'></textarea>
+  <input type='submit' value='Upload' />
+</form>
+
+{% endblock %}
