@@ -44,4 +44,6 @@ nosetests.xml
 .DS_Store
 
 # Project specific
+database.db
 login.py
+hacker_school.py
