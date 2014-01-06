@@ -98,7 +98,7 @@ class FetchUrlWorker(threading.Thread):
         data = []
         for c in contributors:
             data.append((repo_id,
-                         user_id,
+                         int(c['id']),
                          int(c['contributions'])))
         if data:
             self.db_queue.put(('contributors', data))
@@ -125,7 +125,7 @@ class DbWorker(threading.Thread):
                     print('DB got: {0}, [{1}, ...]'.format(table, data[0]))
                     with conn:
                         conn.executemany('INSERT OR REPLACE INTO contributors VALUES (?, ?, ?)', data)
-            except:
+            except Exception as e:
                 print('Error with db insert: table={0}, data={1}'.format(table, data))
             finally:
                 self.queue.task_done()
