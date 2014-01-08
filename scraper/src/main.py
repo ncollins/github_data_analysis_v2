@@ -68,8 +68,9 @@ class FetchUrlWorker(threading.Thread):
             user_id = data.get('id', None)
             login = data.get('login', None)
             repos_url = data.get('repos_url', None)
+            avatar_url = data.get('avatar_url', None)
             if user_id:
-                self.db_queue.put(('users', (user_id, login, repos_url)))
+                self.db_queue.put(('users', (user_id, login, repos_url, avatar_url)))
                 if repos_url:
                     self.download_queue.put(('repos', repos_url, user_id))
             else:
@@ -116,7 +117,7 @@ class DbWorker(threading.Thread):
                 if table == 'users':
                     print('DB got: {0}, {1}'.format(table, data))
                     with conn:
-                        conn.execute('INSERT OR REPLACE INTO users VALUES (?, ?, ?)', data)
+                        conn.execute('INSERT OR REPLACE INTO users VALUES (?, ?, ?, ?)', data)
                 elif table == 'repos':
                     print('DB got: {0}, [{1}, ...]'.format(table, data[0]))
                     with conn:

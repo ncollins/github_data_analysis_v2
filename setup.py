@@ -8,7 +8,8 @@ c.execute("""
           CREATE TABLE IF NOT EXISTS users (
           id INTEGER PRIMARY KEY,
           login TEXT KEY,
-          repos_url TEXT
+          repos_url TEXT,
+          avatar_url TEXT
           );
           """)
 
