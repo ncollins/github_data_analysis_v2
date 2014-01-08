@@ -95,7 +95,7 @@ class FetchUrlWorker(threading.Thread):
             self.db_queue.put(('repos', data)) 
 
     def _fetch_contributors(self, url, repo_id, user_id):
-        contributors = get_pages(url)
+        contributors = get_pages(url, max_pages = 30) # non-personal repos
         data = []
         for c in contributors:
             data.append((repo_id,
