@@ -7,16 +7,18 @@ c = conn.cursor()
 c.execute("""
           CREATE TABLE IF NOT EXISTS users (
           id INTEGER PRIMARY KEY,
-          login TEXT KEY,
+          login TEXT,
           repos_url TEXT,
           avatar_url TEXT
           );
           """)
 
+c.execute('CREATE UNIQUE INDEX users_login ON users (login);')
+
 c.execute("""
           CREATE TABLE IF NOT EXISTS repos (
           id INTEGER PRIMARY KEY,
-          user_id INTEGER KEY,
+          user_id INTEGER,
           name TEXT KEY,
           url TEXT,
           language TEXT,
@@ -24,11 +26,14 @@ c.execute("""
           contributors_url TEXT
           );
           """)
+          
+c.execute('CREATE INDEX repos_user_id ON repos (user_id);')
+c.execute('CREATE INDEX repos_name ON repos (name);')
 
 c.execute("""
           CREATE TABLE IF NOT EXISTS contributors (
-          repo_id INTEGER KEY,
-          user_id INTEGER KEY,
+          repo_id INTEGER,
+          user_id INTEGER,
           contributions INTEGER,
           PRIMARY KEY (repo_id, user_id)
           );
