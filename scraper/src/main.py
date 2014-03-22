@@ -1,7 +1,7 @@
 import time
 import sqlite3
 import threading
-import Queue
+import queue
 
 import requests
 
@@ -135,8 +135,8 @@ class DbWorker(threading.Thread):
 # main
 
 if __name__ == '__main__':
-    download_queue = Queue.Queue()
-    db_queue = Queue.Queue()
+    download_queue = queue.Queue()
+    db_queue = queue.Queue()
 
     #spawn a pool of threads, and pass them queue instance 
     fetch_url_workers = []
