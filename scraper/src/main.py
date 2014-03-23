@@ -2,8 +2,10 @@ import time
 import sqlite3
 import threading
 import queue
+import argparse
 
 import requests
+import sqlalchemy
 
 import login
 import hacker_school
@@ -105,27 +107,24 @@ class FetchUrlWorker(threading.Thread):
             self.db_queue.put(('contributors', data))
 
 class DbWorker(threading.Thread):
-    def __init__(self, queue):
+    def __init__(self, queue, engine):
         threading.Thread.__init__(self)
         self.queue = queue
 
     def run(self):
-        conn = sqlite3.connect('../../database.db')
+        conn = engine.connect()
         while True:
             table, data = self.queue.get()
             try:
                 if table == 'users':
                     print('DB got: {0}, {1}'.format(table, data))
-                    with conn:
-                        conn.execute('INSERT OR REPLACE INTO users VALUES (?, ?, ?, ?)', data)
+                    conn.execute('INSERT OR REPLACE INTO users VALUES (?, ?, ?, ?)', data)
                 elif table == 'repos':
                     print('DB got: {0}, [{1}, ...]'.format(table, data[0]))
-                    with conn:
-                        conn.executemany('INSERT OR REPLACE INTO repos VALUES (?, ?, ?, ?, ?, ?, ?)', data)
+                    conn.execute('INSERT OR REPLACE INTO repos VALUES (?, ?, ?, ?, ?, ?, ?)', data)
                 elif table == 'contributors':
                     print('DB got: {0}, [{1}, ...]'.format(table, data[0]))
-                    with conn:
-                        conn.executemany('INSERT OR REPLACE INTO contributors VALUES (?, ?, ?)', data)
+                    conn.execute('INSERT OR REPLACE INTO contributors VALUES (?, ?, ?)', data)
             except Exception as e:
                 print('Error with db insert: table={0}, data={1}'.format(table, data))
             finally:
@@ -135,6 +134,29 @@ class DbWorker(threading.Thread):
 # main
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--sqlite')
+    group.add_argument('--mysql')
+
+    args = vars(parser.parse_args())
+
+    print(args)
+
+    for k, v in args.items():
+        if k in ['mysql', 'sqlite'] and (v is not None):
+            db, location = k, v
+            break
+
+    if db == 'sqlite':
+        engine = sqlalchemy.create_engine('{0}:///{1}'.format(db, location))
+    else:
+        engine = sqlalchemy.create_engine('{0}://{1}'.format(db, location))
+
+    connection = engine.connect()
+
+    connection.close()
+
     download_queue = queue.Queue()
     db_queue = queue.Queue()
 
@@ -151,7 +173,7 @@ if __name__ == '__main__':
         download_queue.put(('user', user_url.format(user)))
 
     # start a DbWorker
-    db_worker = DbWorker(db_queue)
+    db_worker = DbWorker(db_queue, engine)
     db_worker.setDaemon(True)
     db_worker.start()
 
